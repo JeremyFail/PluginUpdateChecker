@@ -11,7 +11,7 @@ The checker runs network work **asynchronously**, then applies results, events, 
 | | |
 |--|--|
 | **Language / build** | Java 17+, Maven |
-| **Coordinates** | `com.failprooftech:plugin-update-checker:1.0.0` (see `pom.xml`) |
+| **Coordinates** | `com.failprooftech:plugin-update-checker:1.1.0` (see `pom.xml`) |
 | **Library version in code** | `PluginUpdateChecker.VERSION` |
 
 ## Documentation
@@ -30,6 +30,8 @@ Full documentation lives in the **[GitHub Wiki](https://github.com/JeremyFail/Pl
 public void onEnable() {
     PluginUpdateChecker checker = new PluginUpdateChecker(this, "Owner/Repo");
     checker.setDownloadUrl("https://example.com/releases");
+    // Default: latest stable release only (GitHub /releases/latest).
+    // checker.setIncludeGitHubPrereleases(true); // newest created release, including pre-releases
     checker.checkNow();
     checker.scheduleRepeating(6, TimeUnit.HOURS);
 }

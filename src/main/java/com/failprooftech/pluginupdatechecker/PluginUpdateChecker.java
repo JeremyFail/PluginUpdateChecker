@@ -160,7 +160,16 @@ public class PluginUpdateChecker
     private volatile long repeatingTaskId = -1;
 
     /**
-     * Configures a GitHub Releases source: {@code GET /repos/{owner}/{repo}/releases}, first element’s {@code tag_name}.
+     * For GitHub-backed checkers: when {@code false} (default), compare against the latest <em>stable</em> release
+     * ({@code /releases/latest}). When {@code true}, compare against the newest created release, including pre-releases.
+     * Ignored for plain-text URL and custom {@link RemoteVersionSupplier} constructors.
+     */
+    private volatile boolean includeGitHubPrereleases;
+
+    /**
+     * Configures a GitHub Releases source. By default uses {@code GET /repos/{owner}/{repo}/releases/latest}
+     * (latest stable, non-prerelease). Call {@link #setIncludeGitHubPrereleases(boolean)} with {@code true} to compare
+     * against the newest created release instead (including pre-releases).
      *
      * @param plugin          host plugin (must not be {@code null})
      * @param githubOwnerRepo repository slug in the form {@code owner/repo}
@@ -172,8 +181,11 @@ public class PluginUpdateChecker
         Objects.requireNonNull(githubOwnerRepo, "githubOwnerRepo");
         String githubOwnerSlug = githubOwnerRepo;
         this.plugin = plugin;
-        this.supplier = () -> new GitHubReleasesSupplier(githubOwnerSlug, this::buildUserAgent, () -> this.connectTimeoutMs)
-                .fetchLatestVersion();
+        this.supplier = () -> new GitHubReleasesSupplier(
+                githubOwnerSlug,
+                this::buildUserAgent,
+                () -> this.connectTimeoutMs,
+                this.includeGitHubPrereleases).fetchLatestVersion();
         this.scheduler = new BukkitUpdateScheduler(plugin);
         afterConstruct();
     }
@@ -352,6 +364,33 @@ public class PluginUpdateChecker
         }
         this.connectTimeoutMs = connectTimeoutMs;
         return this;
+    }
+
+    /**
+     * Controls which GitHub release tag is fetched when this checker was constructed with {@code owner/repo}.
+     * <p>
+     * {@code false} (default): {@code GET /repos/{owner}/{repo}/releases/latest} — latest stable release only
+     * (pre-releases on GitHub do not trigger update notices).
+     * {@code true}: {@code GET /repos/{owner}/{repo}/releases} and use the newest created release, including pre-releases.
+     * <p>
+     * May be changed before {@link #checkNow()} or {@link #scheduleRepeating(long, java.util.concurrent.TimeUnit)};
+     * each check reads the current value.
+     *
+     * @param include {@code true} to include pre-releases when resolving the remote version
+     * @return this instance, for chaining
+     */
+    public PluginUpdateChecker setIncludeGitHubPrereleases(boolean include)
+    {
+        this.includeGitHubPrereleases = include;
+        return this;
+    }
+
+    /**
+     * @return {@link #setIncludeGitHubPrereleases(boolean)} for GitHub-backed checkers; always {@code false} is harmless for other sources
+     */
+    public boolean isIncludeGitHubPrereleases()
+    {
+        return includeGitHubPrereleases;
     }
 
     /**
